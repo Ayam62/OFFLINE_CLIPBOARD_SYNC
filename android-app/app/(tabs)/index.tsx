@@ -27,7 +27,8 @@ export default function HomeScreen() {
   const [serverUrl, setServerUrl] = useState<string>('');
 
   const socketRef = useRef<WebSocket | null>(null);
-  const appState = useRef(AppState.currentState);
+  //const appState = useRef(AppState.currentState);
+
 
   // Background task for clipboard monitoring
   const backgroundClipboardTask = async (taskData: any) => {
@@ -69,7 +70,7 @@ export default function HomeScreen() {
       }
     };
 
-    const sub = AppState.addEventListener('change', handleAppStateChange);
+    const sub = AppState.addEventListener('change', handleAppStateChange);//change between foreground and background
     return () => {
       sub.remove();
       BackgroundService.stop();
@@ -98,7 +99,7 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, [lastSentContent]);
 
-  // Handle WebSocket messages
+  // Handle WebSocket messages(incoming clipboard data from laptop's server)
   const handleWebSocketMessage = (event: WebSocketMessageEvent) => {
     try {
       const message: Message = JSON.parse(event.data);

@@ -18,7 +18,7 @@ import qrcode
 from PIL import Image
 
 
-# --- Global variables ---
+#  Global variables 
 connected_clients = {}
 last_clipboard = ""
 
@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- FastAPI app ---
+# FastAPI app 
 fastapi_app = FastAPI()
 
 @fastapi_app.websocket("/ws/{device_id}")
@@ -39,9 +39,9 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
     # Check if device is already connected
     if device_id in connected_clients:
         logger.warning(f"Device {device_id} already connected. Closing previous connection.")
-        await connected_clients[device_id].close()
+        await connected_clients[device_id].close()#pailai connect xa vane disconnect garne
     
-    await websocket.accept()
+    await websocket.accept()# close vaisakepaxi tyo accept garne
     connected_clients[device_id] = websocket
     logger.info(f"Device {device_id} connected via WebSocket")
     
@@ -49,26 +49,28 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
     if ClipboardSyncApp.instance():
         GLib.idle_add(
             ClipboardSyncApp.instance().update_status_label, 
-            f"Status: {device_id[:8]}... Connected"
+            f"Status: {device_id[:8]}... Connected"# 8 ota samma device id dekhaune
         )
 
+   #yaa sammma connected bhaisakyo aba data receive garne
     try:
         while True:
-            data = await websocket.receive_text()
+            data = await websocket.receive_text()#client bata data receive garne...uta bata data send garya hunxa
             logger.debug(f"Received data from {device_id}: {data[:100]}...")
             
             try:
-                message = json.loads(data)
+                message = json.loads(data)#json data lai python object ma convert garxa(Jasto khalko ni msg huna sakxa either pairing request or clipboard update)
                 
                 # Handle pairing request
                 if message.get('type') == 'pairing_request':
                     logger.info(f"Pairing request from {device_id}")
+                    
                     await websocket.send_json({
                         "type": "pairing_response",
                         "success": True,
                         "message": "Pairing successful"
                     })
-                    continue
+                    continue #continue rakhena vane pairing request lai pani clipboard update jasto treat garxa tei vara garnai parxa
                 
                 # Handle clipboard update
                 if message.get('type') == 'clipboard_update' and 'text' in message:
@@ -78,8 +80,9 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
                         last_clipboard = content
                         logger.info(f"Received clipboard update from {device_id}")
                         
-                        # Broadcast to other connected devices
+                        # Broadcast to other connected devices(Laptop ma connect gareko sabai connected device ma send garne)
                         for client_id, client_ws in connected_clients.items():
+                            print(connected_clients.items())
                             if client_id != device_id and client_ws.application_state == WebSocketState.CONNECTED:
                                 try:
                                     await client_ws.send_json({
@@ -97,12 +100,12 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
                     continue
                 
                 # Fallback for plain text
-                if 'text' in message:
-                    content = message['text']
-                    if content and content != last_clipboard:
-                        pyperclip.copy(content)
-                        last_clipboard = content
-                        logger.info(f"Received text from {device_id}")
+                # if 'text' in message:
+                #     content = message['text']
+                #     if content and content != last_clipboard:
+                #         pyperclip.copy(content)
+                #         last_clipboard = content
+                #         logger.info(f"Received text from {device_id}")
                 
             except json.JSONDecodeError:
                 # Handle non-JSON messages
@@ -123,13 +126,14 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
                 f"Status: {device_id[:8]}... Disconnected"
             )
 
-# --- Clipboard monitor ---
+#Aile samma device bata copy matrai bhairathyo aba phone ma send garne
+#  Clipboard monitor 
 def start_clipboard_monitor():
     async def monitor():
         global last_clipboard
         while True:
             try:
-                content = pyperclip.paste()
+                content = pyperclip.paste()#laptop ko clipboard content ma paste garne ani tyo content chai phone ma send gardine
                 if content and content != last_clipboard:
                     last_clipboard = content
                     
@@ -154,7 +158,9 @@ def start_clipboard_monitor():
 
     threading.Thread(target=lambda: asyncio.run(monitor()), daemon=True).start()
 
-# --- GTK Application ---
+
+
+# GTK Application 
 class ClipboardSyncApp(Gtk.Window):
     _instance = None
 
@@ -293,7 +299,7 @@ class ClipboardSyncApp(Gtk.Window):
     def on_destroy(self, *args):
         Gtk.main_quit()
 
-# --- Run server & app ---
+# Run server & app 
 def run_fastapi():
     uvicorn.run(
         fastapi_app, 
@@ -308,7 +314,6 @@ def main():
     # Start FastAPI server in background
     threading.Thread(target=run_fastapi, daemon=True).start()
     start_clipboard_monitor()
-
     # Start GTK App
     app = ClipboardSyncApp()
     app.show_all()
